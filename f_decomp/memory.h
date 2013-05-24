@@ -49,9 +49,9 @@ private:
     static void delete_object(void* obj);
 
 public:
-    
+        
     // BEGTEXT:004AEBE0
-    static void* create_object_with_value(char* value);
+    static char* create_object_with_value(const char* value);
     
     // BEGTEXT:004AEC30
     static void* run_create_object_func(size_t n_size);

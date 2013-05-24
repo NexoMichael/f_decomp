@@ -13,11 +13,11 @@ unsigned int Memory::max_count_of_objects = 0;
 unsigned int Memory::current_size_of_objects = 0;
 unsigned int Memory::max_size_of_objects = 0;
 
-void* (*Memory::create_object_func)(size_t) = malloc;
-void* (*Memory::realloc_object_func)(void*, unsigned long) = realloc;
-void (*Memory::delete_object_func)(void*) = free;
+void* (*Memory::create_object_func)(size_t) = create_object;
+void* (*Memory::realloc_object_func)(void*, unsigned long) = realloc_object;
+void (*Memory::delete_object_func)(void*) = delete_object;
 
-void* Memory::create_object_with_value(char* value) {
+char* Memory::create_object_with_value(const char* value) {
     
     uint32_t size_t = (uint32_t)strlen(value);
     if (size_t == 0) size_t = 1;
@@ -27,7 +27,7 @@ void* Memory::create_object_with_value(char* value) {
     void* result = create_object_func(size_t);
     
     memcpy(result, value, size_t);
-    return result;
+    return (char*)result;
 }
 
 void* Memory::run_create_object_func(size_t n_size) {
@@ -71,13 +71,16 @@ void* Memory::realloc_object(void* obj, unsigned long n_size) {
         return create_object_func((int)n_size);
     }
     
+    obj = (void*)((char*) obj - OBJECT_HEADER_SIZE);
+
+    
     uint32_t size = ((uint32_t*)obj)[0];
     current_size_of_objects -= size;
     
     if (!check_object(obj)) return nullptr;
 
     uint32_t full_size = (uint32_t)(n_size + OBJECT_OVERHEAD);
-    obj = realloc(obj, full_size);
+    obj = realloc((char*)obj, full_size);
     if (!obj) {
         current_count_of_objects--;
         Debug::debug_info("(%s,%u): ", "memory.c", 195);
@@ -134,7 +137,7 @@ void Memory::convert_to_object(void* obj, uint32_t size) {
 bool Memory::check_object(void* obj) {
     uint32_t size = ((uint32_t*)obj)[0];
     
-    if (((uint32_t*)((char*)obj + sizeof(uint32_t)))[0] != SIGN_OBJECT_START) {
+    if (((uint32_t*)obj)[1] != SIGN_OBJECT_START) {
         Debug::debug_info("Memory header stomped.\n");
         return false;
     }
